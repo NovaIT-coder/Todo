@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Robot Mobile Control</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --primary-green: #00ff88;
+            --active-red: #ff0044;
+            --btn-gray: #30363d;
+            --text-color: #e6edf3;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            overflow: hidden; /* Ngăn cuộn trang trên điện thoại */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        h2 {
+            margin-top: 20px;
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+            color: var(--primary-green);
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .status-bar {
+            width: 90%;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .btn-connect {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--primary-green);
+            background: transparent;
+            color: var(--primary-green);
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* Khu vực điều khiển chính - Đẩy xuống dưới để ngón cái dễ chạm */
+        .control-section {
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 30px 30px 0 0;
+            padding: 30px 0 50px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* D-pad Layout */
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 90px);
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .btn-dir {
+            width: 90px;
+            height: 90px;
+            border-radius: 20px;
+            border: none;
+            background: var(--btn-gray);
+            color: white;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            transition: 0.1s;
+        }
+
+        .btn-dir:active {
+            background: var(--primary-green);
+            color: var(--bg-color);
+            transform: scale(0.95);
+        }
+
+        .btn-stop {
+            background: #ff7b72;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* Action Buttons */
+        .action-group {
+            display: flex;
+            gap: 30px;
+        }
+
+        .btn-action {
+            width: 130px;
+            height: 80px;
+            border-radius: 20px;
+            border: none;
+            background: var(--primary-green);
+            color: var(--bg-color);
+            font-weight: 900;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,255,136,0.2);
+            transition: 0.1s;
+        }
+
+        .btn-action:active {
+            background: var(--active-red) !important;
+            color: white;
+            transform: scale(0.9);
+            box-shadow: 0 0 30px rgba(255, 0, 68, 0.6);
+        }
+
+        .empty { visibility: hidden; }
+    </style>
+</head>
+<body>
+
+    <h2>ROBOT TERMINAL</h2>
+
+    <div class="status-bar">
+        <button class="btn-connect" onclick="connect()">KẾT NỐI BLUETOOTH</button>
+    </div>
+
+    <div class="control-section">
+        <div class="d-pad">
+            <div class="empty"></div>
+            <button class="btn-dir" onmousedown="send('F')" onmouseup="send('S')" ontouchstart="send('F')" ontouchend="send('S')">▲</button>
+            <div class="empty"></div>
+
+            <button class="btn-dir" onmousedown="send('L')" onmouseup="send('S')" ontouchstart="send('L')" ontouchend="send('S')">◀</button>
+            <button class="btn-dir btn-stop" onclick="send('S')">STOP</button>
+            <button class="btn-dir" onmousedown="send('R')" onmouseup="send('S')" ontouchstart="send('R')" ontouchend="send('S')">▶</button>
+
+            <div class="empty"></div>
+            <button class="btn-dir" onmousedown="send('B')" onmouseup="send('S')" ontouchstart="send('B')" ontouchend="send('S')">▼</button>
+            <div class="empty"></div>
+        </div>
+
+        <div class="action-group">
+            <button class="btn-action" 
+                    onmousedown="send('G')" onmouseup="send('S')" 
+                    ontouchstart="send('G')" ontouchend="send('S')">GẮP</button>
+            
+            <button class="btn-action" 
+                    onmousedown="send('H')" onmouseup="send('S')" 
+                    ontouchstart="send('H')" ontouchend="send('S')">THẢ</button>
+        </div>
+    </div>
+
+<script>
+let characteristic;
+
+async function connect() {
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: ['1234']
+        });
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('1234');
+        characteristic = await service.getCharacteristic('5678');
+        document.querySelector('.btn-connect').innerText = "ĐÃ KẾT NỐI ✓";
+        document.querySelector('.btn-connect').style.borderColor = "#00ff88";
+    } catch (error) {
+        alert("Chưa kết nối được Bluetooth!");
+    }
+}
+
+function send(cmd) {
+    if (!characteristic) return;
+    let data = new TextEncoder().encode(cmd);
+    characteristic.writeValue(data).catch(() => {});
+}
+
+// Ngăn chặn menu chuột phải khi nhấn giữ trên mobile
+window.oncontextmenu = function(event) {
+     event.preventDefault();
+     event.stopPropagation();
+     return false;
+};
+</script>
+
+</body>
+</html>
